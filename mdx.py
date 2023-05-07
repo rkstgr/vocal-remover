@@ -175,8 +175,8 @@ class MDX:
             "n_bins": n_fft // 2 + 1,
             "trim": n_fft // 2,
             "chunk_size": hop * (dim_t - 1),
-            "window": torch.hann_window(window_length=n_fft, periodic=False),
-            "freq_pad": torch.zeros([1, dim_c, n_bins - dim_f, dim_t]),
+            "window": torch.hann_window(window_length=n_fft, periodic=False).to(self.device),
+            "freq_pad": torch.zeros([1, dim_c, n_bins - dim_f, dim_t]).to(self.device),
             "gen_size": hop * (dim_t - 1) - 2 * (n_fft // 2),
         }
         return params
@@ -263,7 +263,7 @@ class MDX:
         params = self.model_params
         chunk_size = params["chunk_size"]
         x = x.reshape([-1, chunk_size])
-        x = torch.stft(x, n_fft=params["n_fft"], hop_length=params["hop"], window=params["window"].to(x.device),
+        x = torch.stft(x, n_fft=params["n_fft"], hop_length=params["hop"], window=params["window"],
                        center=True, return_complex=True)
         x = torch.view_as_real(x)
         x = x.permute([0, 3, 1, 2])
@@ -279,6 +279,6 @@ class MDX:
         x = x.permute([0, 2, 3, 1])
         x = x.contiguous()
         x = torch.view_as_complex(x)
-        x = torch.istft(x, n_fft=params["n_fft"], hop_length=params["hop"], window=params["window"].to(x.device),
+        x = torch.istft(x, n_fft=params["n_fft"], hop_length=params["hop"], window=params["window"],
                         center=True)
         return x.reshape([-1, 2, params["chunk_size"]])

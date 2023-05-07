@@ -30,6 +30,7 @@ def process(input_paths, output_dir=None, recursive=False, device="cpu"):
 
     input_paths: list of paths to the audio files
     """
+    print(f"Using device: {device}")
     model_path = PROJECT_ROOT / "models/MDX_Net_Models/Kim_Vocal_1.onnx"
     model = MDX(model_path, {}, device=device)
 
