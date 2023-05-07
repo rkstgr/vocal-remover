@@ -30,7 +30,7 @@ def process(input_paths, output_dir=None, recursive=False):
 
     input_paths: list of paths to the audio files
     """
-    model_path = PROJECT_ROOT / "models/MDX_NET_Models/Kim_Vocal_1.onnx"
+    model_path = PROJECT_ROOT / "models/MDX_Net_Models/Kim_Vocal_1.onnx"
     model = MDX(model_path, {}, device="cpu")
 
     # Wrap the outer loop with a tqdm progress bar
