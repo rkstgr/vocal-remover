@@ -13,6 +13,7 @@ from mdx import MDX
 
 PROJECT_ROOT = Path(__file__).parent
 
+AUDIO_EXTENSIONS = [".mp3", ".wav", ".ogg", ".flac", ".opus"]
 
 def get_audio_files(input_path, recursive):
     """Get a list of all the audio files in the given input path"""
@@ -20,7 +21,10 @@ def get_audio_files(input_path, recursive):
         return [input_path]
     elif input_path.is_dir():
         search_pattern = "**/*" if recursive else "*"
-        return list(input_path.glob(f"{search_pattern}.mp3")) + list(input_path.glob(f"{search_pattern}.wav"))
+        files = []
+        for ext in AUDIO_EXTENSIONS:
+            files.extend(input_path.glob(f"{search_pattern}{ext}"))
+        return files
     else:
         raise ValueError("Input path is not a valid file or directory.")
 
