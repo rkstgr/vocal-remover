@@ -1,3 +1,5 @@
+import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Union, Callable
@@ -17,6 +19,22 @@ from separate import rerun_mp3
 def write_audio(stem_path, stem_audio, sample_rate):
     sf.write(str(stem_path), stem_audio, sample_rate)
     # encode(stem_path, target_encoding)
+
+
+def get_audio_codec(file_path: Path) -> str:
+    cmd = f"ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 {file_path}"
+    codec = subprocess.check_output(cmd, shell=True, text=True).strip()
+    return codec
+
+
+def encode(target_audio_file: Path, original_file: Path):
+    codec = get_audio_codec(original_file)
+    output_file = target_audio_file.parent / (target_audio_file.stem + "_encoded" + target_audio_file.suffix)
+
+    cmd = f"ffmpeg -i \"{target_audio_file}\" -vn -y -c:a {codec} \"{output_file}\""
+    subprocess.run(cmd, shell=True)
+
+    return output_file
 
 
 @NotImplementedError
@@ -122,7 +140,6 @@ class MDX:
             else:
                 ort_providers = ['CPUExecutionProvider']
             ort_ = ort.InferenceSession(str(model_path), providers=ort_providers)
-            print(ort_)
             return lambda ort_input: ort_.run(None, {'input': ort_input.cpu().numpy()})[0]
         else:
             raise ValueError('Invalid model format. Please use either .ckpt or .onnx')
@@ -144,7 +161,10 @@ class MDX:
             # use audio_file_path name
             primary_stem_path = Path(output_dir) / f'{audio_file_path.stem}_({primary_stem_label}).wav'
             primary_source = spec_utils.normalize(source, normalize).T
+
             write_audio(primary_stem_path, primary_source, self.SAMPLE_RATE)
+            encode(primary_stem_path, original_file=audio_file_path)
+            os.unlink(primary_stem_path)
 
         if secondary_stem:
             secondary_stem_path = Path(output_dir) / f'{audio_file_path.stem}_({secondary_stem_label}).wav'
@@ -155,7 +175,8 @@ class MDX:
             self.secondary_source = (-self.secondary_source.T + raw_mix.T)
 
             write_audio(secondary_stem_path, self.secondary_source, self.SAMPLE_RATE)
-
+            encode(secondary_stem_path, original_file=audio_file_path)
+            os.unlink(secondary_stem_path)
 
     def initialize_model_params(self):
         """Initialize the model settings"""
