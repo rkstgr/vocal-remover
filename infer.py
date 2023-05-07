@@ -25,13 +25,13 @@ def get_audio_files(input_path, recursive):
         raise ValueError("Input path is not a valid file or directory.")
 
 
-def process(input_paths, output_dir=None, recursive=False):
+def process(input_paths, output_dir=None, recursive=False, device="cpu"):
     """Start the conversion for all the given mp3 and wav files
 
     input_paths: list of paths to the audio files
     """
     model_path = PROJECT_ROOT / "models/MDX_Net_Models/Kim_Vocal_1.onnx"
-    model = MDX(model_path, {}, device="cpu")
+    model = MDX(model_path, {}, device=device)
 
     # Wrap the outer loop with a tqdm progress bar
     for input_path in tqdm(input_paths, desc="Processing files", unit="file"):
@@ -71,7 +71,7 @@ def main():
     input_paths = get_audio_files(input_path, args.recursive)
 
     start = time.time()
-    process(input_paths, output_dir, args.recursive)
+    process(input_paths, output_dir, args.recursive, args.device)
     end = time.time()
     print(f"Total time elapsed: {end - start:.2f} seconds")
 
