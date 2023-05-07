@@ -114,12 +114,15 @@ class MDX:
     def initialize_model_fn(model_path, device) -> Callable[[torch.Tensor], torch.Tensor]:
         if model_path.suffix == '.ckpt':
             model_params = torch.load(str(model_path), map_location=device)['hyper_parameters']
-            # dim_c, hop = model_params['dim_c'], model_params['hop_length']
             separator = mdxnet.ConvTDFNet(**model_params)
             return separator.load_from_checkpoint(model_path).to(device).eval()
         elif model_path.suffix == '.onnx':
-            ort_ = ort.InferenceSession(str(model_path), providers=[
-                'CUDAExecutionProvider' if device == 'cuda' else 'CPUExecutionProvider'])
+            if device == "cuda":
+                ort_providers = ['CUDAExecutionProvider']
+            else:
+                ort_providers = ['CPUExecutionProvider']
+            ort_ = ort.InferenceSession(str(model_path), providers=ort_providers)
+            print(ort_)
             return lambda ort_input: ort_.run(None, {'input': ort_input.cpu().numpy()})[0]
         else:
             raise ValueError('Invalid model format. Please use either .ckpt or .onnx')
