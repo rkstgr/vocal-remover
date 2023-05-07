@@ -156,7 +156,6 @@ class MDX:
 
             write_audio(secondary_stem_path, self.secondary_source, self.SAMPLE_RATE)
 
-        torch.cuda.empty_cache()
 
     def initialize_model_params(self):
         """Initialize the model settings"""
