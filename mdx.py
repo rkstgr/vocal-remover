@@ -124,7 +124,7 @@ class MDX:
         else:
             raise ValueError('Invalid model format. Please use either .ckpt or .onnx')
 
-    def separate_file(self, file_path, primary_stem=True, secondary_stem=False):
+    def separate_file(self, file_path, output_dir, primary_stem=True, secondary_stem=False, progress_callback=None):
 
         audio_file_path = Path(file_path)
 
@@ -135,16 +135,16 @@ class MDX:
         # mix, raw_mix are dicts
         mix, raw_mix, samplerate = prepare_mix(str(audio_file_path), self.chunks, self.margin, mdx_net_cut=True,
                                                sample_rate=self.SAMPLE_RATE)
-        source = self.demix_base(mix, is_ckpt="ckpt" in self.model_path.suffix)[0]
+        source = self.demix_base(mix, is_ckpt="ckpt" in self.model_path.suffix, progress_callback=progress_callback)[0]
 
         if primary_stem:
             # use audio_file_path name
-            primary_stem_path = audio_file_path.with_name(f'{audio_file_path.stem}_({primary_stem_label}).wav')
+            primary_stem_path = Path(output_dir) / f'{audio_file_path.stem}_({primary_stem_label}).wav'
             primary_source = spec_utils.normalize(source, normalize).T
             write_audio(primary_stem_path, primary_source, self.SAMPLE_RATE)
 
         if secondary_stem:
-            secondary_stem_path = audio_file_path.with_name(f'{audio_file_path.stem}_({secondary_stem_label}).wav')
+            secondary_stem_path = Path(output_dir) / f'{audio_file_path.stem}_({secondary_stem_label}).wav'
             raw_mix = self.demix_base(raw_mix, is_match_mix=True)[0]
             self.secondary_source, raw_mix = spec_utils.normalize_two_stem(source * self.model_params["compensate"],
                                                                            raw_mix, False)
@@ -207,12 +207,14 @@ class MDX:
 
         return mix_waves, pad
 
-    def demix_base(self, mix, is_ckpt=False, is_match_mix=False):
+    def demix_base(self, mix, is_ckpt=False, is_match_mix=False, progress_callback=None):
         trim = self.model_params["trim"]
         adjust = 1
         mdx_batch_size = 1
 
         chunked_sources = []
+        total_mix_waves = -1
+        current_mix_waves = 0
         for slice in mix:
             sources = []
             tar_waves_ = []
@@ -220,10 +222,15 @@ class MDX:
             mix_waves, pad = self.initialize_mix(mix_p, is_ckpt=is_ckpt)
             mix_waves = mix_waves.split(mdx_batch_size)
             pad = mix_p.shape[-1] if is_ckpt else -pad
+            if total_mix_waves == -1:
+                total_mix_waves = len(mix_waves) * len(mix)
             with torch.no_grad():
                 for mix_wave in mix_waves:
                     tar_waves = self.run_model(mix_wave, is_ckpt=is_ckpt, is_match_mix=is_match_mix)
                     tar_waves_.append(tar_waves)
+                    current_mix_waves += 1
+                    if progress_callback:
+                        progress_callback(current_mix_waves / total_mix_waves)
                 tar_waves_ = np.vstack(tar_waves_)[:, :, trim:-trim] if is_ckpt else tar_waves_
                 tar_waves = np.concatenate(tar_waves_, axis=-1)[:, :pad]
                 start = 0 if slice == 0 else self.margin
