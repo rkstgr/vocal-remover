@@ -103,8 +103,8 @@ class MDX:
 
     def __init__(self, model_path: Union[str, Path], model_params: dict, device: str = 'cuda'):
         self.model_path = model_path
-        self.model_params = self.initialize_model_params()
         self.device = device
+        self.model_params = self.initialize_model_params()
         self.model_fn = self.initialize_model_fn(self.model_path, self.device)
 
         self.chunks = 0
