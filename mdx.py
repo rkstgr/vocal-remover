@@ -22,16 +22,16 @@ def write_audio(stem_path, stem_audio, sample_rate):
 
 
 def get_audio_codec(file_path: Path) -> str:
-    cmd = f"ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 {file_path}"
+    cmd = f"ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of default=noprint_wrappers=1:nokey=1 \"{str(file_path)}\""
     codec = subprocess.check_output(cmd, shell=True, text=True).strip()
     return codec
 
 
 def encode(target_audio_file: Path, original_file: Path):
     codec = get_audio_codec(original_file)
-    output_file = target_audio_file.parent / (target_audio_file.stem + "_encoded" + target_audio_file.suffix)
+    output_file = target_audio_file.parent / (target_audio_file.stem + "_encoded" + original_file.suffix)
 
-    cmd = f"ffmpeg -i \"{target_audio_file}\" -vn -y -c:a {codec} \"{output_file}\""
+    cmd = f"ffmpeg -i \"{target_audio_file}\" -strict -2 -vn -y -c:a {codec} \"{output_file}\""
     subprocess.run(cmd, shell=True)
 
     return output_file
